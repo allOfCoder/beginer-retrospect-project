@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { styled } from "styled-components";
-import { axios } from "axios";
 import { initializeApp } from 'firebase/app';
 import { 
   getStorage,
-  ref, 
+  ref,
   uploadBytes, 
   listAll, 
-  getDownloadURL 
+  getDownloadURL,
+  deleteObject
 } from "firebase/storage";
 import Pica from "pica";
+import useStore from './store'
 const pica = Pica();
 
 const firebaseConfig = {
@@ -27,91 +28,94 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const storage = getStorage(app);
-const storageRef = ref(storage);
 const imageListRef = ref(storage, "images/");
+const image0Ref = ref(storage, "images/0");
 
 const ImageUploader = () => {
+  const { FB_images, FB_images_add } = useStore();
   const [imageUpload, setImageUpload] = useState(null);
   const [imgSrc, setImgSrc] = useState(null);
+  const isMounted = useRef(false);
   const imgRef = useRef();
   const canvasRef = useRef();
 
   function upload() {
     if (imageUpload === null) return;
-    const imageRef = ref(storage, `images/${imageUpload.name}`);
+    const imageRef = ref(storage, `images/${FB_images.length}`);
     uploadBytes(imageRef, imageUpload).then((snapshot) => {
-      getDownloadURL(snapshot.ref).then((url) => {
-        setImgSrc(url);
-      });
+      getDownloadURL(snapshot.ref)
+      .then((url) => setImgSrc(url))
+      .catch((error) => console.log(error));
     });
   };
-
-  listAll(imageListRef).then((response) => {
-    getDownloadURL(response.items[1]).then((url) => {
-      setImgSrc(url);
-    });
-  });
-
+  
   useEffect(() => {
-    // if (imgRef.current) {
-    //   imgRef.current.onload = function() {
-    //     console.log('a')
-    //     if (canvasRef.current) {
-    //       const ctx = canvasRef.current.getContext('2d');
-    //       const targetWidth = '630px';
-    //       const targetHeight = '630px';
-    //       canvasRef.current.width = targetWidth;
-    //       canvasRef.current.height = targetHeight;
-
-    //       ctx.drawImage(imgRef.current, 0, 0, targetWidth, targetHeight);
-
-    //       pica.resize(canvasRef.current, document.createElement('canvas'), {}, (err, result) => {
-    //         if (err) throw err;
-    //         console.log(result);
-    //       });
-    //     }
-    //   };
-    // }
-
-    
-    if (imgRef.current) {
-      if (canvasRef.current) {
-        var img = new Image ();
-        img.crossOrigin = 'anonymous';
-        img.src = imgSrc;
-        img.onload = function () {
-          const ctx = canvasRef.current.getContext('2d');
-          const targetWidth = '630';
-          const targetHeight = '630';
-          canvasRef.current.width = targetWidth;
-          canvasRef.current.height = targetHeight;
-          ctx.drawImage(imgRef.current, 0, 0, targetWidth, targetHeight);
-          
-          // pica.resize(canvasRef.current, document.createElement('canvas'), {}
-          // ).then((res) => {
-          //   console.log(res);
-          // }).catch((err) => {
-          //   console.log(err);
-          // });
+    if (!isMounted.current) {
+      isMounted.current = true;
+    } else {if (imageUpload) {
+      let img = new Image ();
+      img.crossOrigin = 'anonymous';
+      img.src = imgSrc;
+      img.onload = function () {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const newSize = 630;
+        canvas.width = newSize;
+        canvas.height = newSize;
+        const size = Math.min(img.width, img.height);
+        ctx.drawImage(img,
+          (img.width - size) / 2,
+          (img.height - size) / 2,
+          size,
+          size,
+          0, 0, newSize, newSize);
+          pica.resize(canvasRef.current, document.createElement('canvas'))
+          .then((res) => {
+            res.toBlob(blob => {
+              const deleteRef = ref(storage, `images/${FB_images.length}`);
+              deleteObject(deleteRef)
+              .then(() => {
+                FB_images_add(`images/${FB_images.length}`);
+                const imageRef = ref(storage, `images/${FB_images.length}`);
+                uploadBytes(imageRef, blob)
+              });
+            }, 'image/jpg', 0.95);
+          })
         }
-      };
+      }
     }
   }, [imgSrc]);
 
+  const imgsrc = useRef();
+  // getDownloadURL(ref(storage, "images/1").then((url) => {
+  //   imgsrc.current.setAttribute('src', url);
+  // }))
   return (
     <div>
       <input type="file" onChange={(e) => setImageUpload(e.target.files[0])}/>
       <button onClick={upload}>업로드</button>  
-      <img ref={imgRef} src={imgSrc} alt="Source" />
+      <img style={{'display': 'none'}} ref={imgRef} src={imgSrc} alt="Source" />
       <canvas ref={canvasRef} />
-      {/* Render resized image here, for instance: */}
-      {/* <img src={resizedImageObjectURL} alt="Resized" /> */}
+      <img ref={imgsrc} />
     </div>
   );
 };
 
-function Home(props) {
-    
+function Home() {
+  const { FB_images, FB_images_add } = useStore();
+  function FB_images_init() {
+    listAll(imageListRef).then((response) => {
+      response.items.map((item) => {
+        FB_images_add(item.name)
+      });
+    });
+  }
+
+  useEffect(() => {
+    FB_images_init();
+    // .then
+  }, []);
+
   return (
     <>
       <div>
