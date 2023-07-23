@@ -31,7 +31,7 @@ const storage = getStorage(app);
 const imageListRef = ref(storage, "images/");
 
 function ImageUploader() {
-  const { FB_images, FB_images_add } = useStore();
+  const { FB_images, FB_images_add, FB_images_time, FB_images_time_set } = useStore();
   const [imageUpload, setImageUpload] = useState(null);
   const [imgSrc, setImgSrc] = useState(null);
   const isMounted = useRef(false);
@@ -39,12 +39,13 @@ function ImageUploader() {
 
   function upload() {
     if (imageUpload === null) return;
-    const imageRef = ref(storage, `images/${FB_images.length}`);
+    const imageRef = ref(storage, `images/${FB_images_time_set()}`);
     uploadBytes(imageRef, imageUpload).then((snapshot) => {
       getDownloadURL(snapshot.ref)
       .then((url) => setImgSrc(url))
       .catch((error) => console.log(error));
     });
+    imageUpload.value = '';
   };
   
   useEffect(() => {
@@ -61,7 +62,6 @@ function ImageUploader() {
         canvas.width = newSize;
         canvas.height = newSize;
         const size = Math.min(img.width, img.height);
-        console.log((img.height - size) / 2);
         ctx.drawImage(img,
           (img.width - size) / 2,
           (img.height - size) / 2,
@@ -75,11 +75,11 @@ function ImageUploader() {
           pica.resize(canvasRef.current, resizedCanvas)
           .then((res) => {
             res.toBlob(blob => {
-              const deleteRef = ref(storage, `images/${FB_images.length}`);
+              const deleteRef = ref(storage, `images/${FB_images_time}`);
               deleteObject(deleteRef)
               .then(() => {
                 FB_images_add(`images/${FB_images.length}`);
-                const imageRef = ref(storage, `images/${FB_images.length}`);
+                const imageRef = ref(storage, `images/${FB_images_time}`);
                 uploadBytes(imageRef, blob)
                 console.log('Uploaded')
               });
