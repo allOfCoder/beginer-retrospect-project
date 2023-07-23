@@ -29,14 +29,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const storage = getStorage(app);
 const imageListRef = ref(storage, "images/");
-const image0Ref = ref(storage, "images/0");
 
-const ImageUploader = () => {
+function ImageUploader() {
   const { FB_images, FB_images_add } = useStore();
   const [imageUpload, setImageUpload] = useState(null);
   const [imgSrc, setImgSrc] = useState(null);
   const isMounted = useRef(false);
-  const imgRef = useRef();
   const canvasRef = useRef();
 
   function upload() {
@@ -63,13 +61,18 @@ const ImageUploader = () => {
         canvas.width = newSize;
         canvas.height = newSize;
         const size = Math.min(img.width, img.height);
+        console.log((img.height - size) / 2);
         ctx.drawImage(img,
           (img.width - size) / 2,
           (img.height - size) / 2,
           size,
           size,
           0, 0, newSize, newSize);
-          pica.resize(canvasRef.current, document.createElement('canvas'))
+
+          let resizedCanvas = document.createElement('canvas');
+          resizedCanvas.width = newSize;
+          resizedCanvas.height = newSize;
+          pica.resize(canvasRef.current, resizedCanvas)
           .then((res) => {
             res.toBlob(blob => {
               const deleteRef = ref(storage, `images/${FB_images.length}`);
@@ -78,6 +81,7 @@ const ImageUploader = () => {
                 FB_images_add(`images/${FB_images.length}`);
                 const imageRef = ref(storage, `images/${FB_images.length}`);
                 uploadBytes(imageRef, blob)
+                console.log('Uploaded')
               });
             }, 'image/jpg', 0.95);
           })
@@ -86,17 +90,11 @@ const ImageUploader = () => {
     }
   }, [imgSrc]);
 
-  const imgsrc = useRef();
-  // getDownloadURL(ref(storage, "images/1").then((url) => {
-  //   imgsrc.current.setAttribute('src', url);
-  // }))
   return (
     <div>
       <input type="file" onChange={(e) => setImageUpload(e.target.files[0])}/>
       <button onClick={upload}>업로드</button>  
-      <img style={{'display': 'none'}} ref={imgRef} src={imgSrc} alt="Source" />
-      <canvas ref={canvasRef} />
-      <img ref={imgsrc} />
+      <canvas style={{'display': 'none'}} ref={canvasRef} />
     </div>
   );
 };
