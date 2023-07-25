@@ -68,7 +68,6 @@ function ImageUploader() {
           size,
           size,
           0, 0, newSize, newSize);
-
           let resizedCanvas = document.createElement('canvas');
           resizedCanvas.width = newSize;
           resizedCanvas.height = newSize;
@@ -78,12 +77,13 @@ function ImageUploader() {
               const deleteRef = ref(storage, `images/${FB_images_time}`);
               deleteObject(deleteRef)
               .then(() => {
-                FB_images_add(`images/${FB_images.length}`);
                 const imageRef = ref(storage, `images/${FB_images_time}`);
-                uploadBytes(imageRef, blob)
-                console.log('Uploaded')
+                uploadBytes(imageRef, blob).then(() => {
+                  console.log('Uploaded')
+                  FB_images_add(imageRef);
+                })
               });
-            }, 'image/jpg', 0.95);
+            }, 'image/jpg', 0.85);
           })
         }
       }
@@ -99,27 +99,69 @@ function ImageUploader() {
   );
 };
 
+const Container = styled.div`
+  width: 100%;
+  height: 100%;
+`
+const Contents = styled.div`
+  width: 810px;
+  height: 100%;
+  margin : 30px auto;
+  display : flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: start;
+`
+const Content = styled.img`
+  width: 260px;
+  height: 260px;
+  margin: 0 10px 10px 0;
+`
+function ContentImage() {
+  const { FB_images, FB_images_add } = useStore();
+  const [imageUrls, setImageUrls] = useState([]);
+
+  useEffect(() => {
+    async function fetchUrls() {
+      const urls = await Promise.all(
+        FB_images.map((ref) => getDownloadURL(ref))
+      );
+      setImageUrls(urls);
+    }
+    fetchUrls();
+  }, [FB_images]);
+
+  return (
+    <Container>
+      <Contents>
+        {imageUrls.map((url, index) => (
+          <Content key={index} src={url} />
+        ))}
+      </Contents>
+    </Container>
+  )
+}
+
 function Home() {
   const { FB_images, FB_images_add } = useStore();
   function FB_images_init() {
     listAll(imageListRef).then((response) => {
       response.items.map((item) => {
-        FB_images_add(item.name)
+        FB_images_add(item)
       });
     });
   }
 
   useEffect(() => {
-    FB_images_init();
+    FB_images_init()
     // .then
   }, []);
 
   return (
-    <>
-      <div>
-        <ImageUploader />
-      </div>
-    </>
+    <div>
+      <ImageUploader />
+      <ContentImage />
+    </div>
   )
 }
 
