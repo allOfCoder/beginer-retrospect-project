@@ -6,7 +6,7 @@ import {
   getStorage,
   ref,
   uploadBytes, 
-  listAll, 
+  list, 
   getDownloadURL,
   deleteObject
 } from "firebase/storage";
@@ -31,7 +31,7 @@ const storage = getStorage(app);
 const imageListRef = ref(storage, "images/");
 
 function ImageUploader() {
-  const { FB_images, FB_images_add, FB_images_time, FB_images_time_set } = useStore();
+  const { FB_images, FB_images_add_unshift, FB_images_time, FB_images_time_set } = useStore();
   const [imageUpload, setImageUpload] = useState(null);
   const [imgSrc, setImgSrc] = useState(null);
   const isMounted = useRef(false);
@@ -80,7 +80,7 @@ function ImageUploader() {
                 const imageRef = ref(storage, `images/${FB_images_time}`);
                 uploadBytes(imageRef, blob).then(() => {
                   console.log('Uploaded')
-                  FB_images_add(imageRef);
+                  FB_images_add_unshift(imageRef);
                 })
               });
             }, 'image/jpg', 0.85);
@@ -118,8 +118,14 @@ const Content = styled.img`
   margin: 0 10px 10px 0;
 `
 function ContentImage() {
-  const { FB_images, FB_images_add } = useStore();
+  const {
+    FB_images,
+    FB_images_add_push,
+    FB_images_nextPageToken,
+    FB_images_set_nextPageToken
+  } = useStore();
   const [imageUrls, setImageUrls] = useState([]);
+  const loader = useRef(null);
 
   useEffect(() => {
     async function fetchUrls() {
@@ -130,28 +136,86 @@ function ContentImage() {
     }
     fetchUrls();
   }, [FB_images]);
+  
+  function loadMore() {
+    console.log('Loading more...');
+    const nextPage = list(imageListRef, { 
+      maxResults: 3,
+      pageToken: FB_images_nextPageToken,
+    })
+    nextPage.then((res) => {
+      if (FB_images_nextPageToken) {
+        res.items.map((item) => {
+          FB_images_add_push(item);
+        });
+        FB_images_set_nextPageToken(res.nextPageToken);
+      }
+    }
+    )
+  }
+
+  useEffect(() => {
+    const options = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0
+    }
+    const observer = new IntersectionObserver((entries) => {
+      const target = entries[0];
+      if (target.isIntersecting) {
+        loadMore();
+        observer.unobserve(loader.current)
+      }
+    }, options);
+    if (loader.current) {
+      observer.observe(loader.current)
+    }
+  }, [imageUrls]);
 
   return (
     <Container>
       <Contents>
-        {imageUrls.map((url, index) => (
-          <Content key={index} src={url} />
-        ))}
+        {imageUrls.map((url, index, arr) => {
+          if (url === arr[arr.length - 1]) {
+            return <Content ref={loader} key={index} src={url} loading="lazy" />
+          }
+          return <Content key={index} src={url} loading="lazy" />
+        })}
       </Contents>
     </Container>
   )
 }
 
 function Home() {
-  const { FB_images, FB_images_add } = useStore();
+  const {
+    FB_images,
+    FB_images_add_push,
+    FB_images_nextPageToken,
+    FB_images_set_nextPageToken
+  } = useStore();
   function FB_images_init() {
-    listAll(imageListRef).then((response) => {
-      response.items.map((item) => {
-        FB_images_add(item)
+    const firstPage = list(imageListRef, { maxResults: 12 })
+    firstPage.then((res) => {
+      res.items.map((item) => {
+        FB_images_add_push(item);
       });
-    });
+      FB_images_set_nextPageToken(res.nextPageToken);
+    })
   }
 
+  function handleRendering() {
+    const nextPage = list(imageListRef, { 
+      maxResults: 6,
+      pageToken: FB_images_nextPageToken,
+    })
+    nextPage.then((res) => {
+      res.items.map((item) => {
+        FB_images_add_push(item);
+      });
+      FB_images_set_nextPageToken(res.nextPageToken);
+    })
+  }
+  
   useEffect(() => {
     FB_images_init()
     // .then
@@ -160,6 +224,7 @@ function Home() {
   return (
     <div>
       <ImageUploader />
+      <button onClick={handleRendering}>렌더링</button>
       <ContentImage />
     </div>
   )
