@@ -6,7 +6,7 @@ import {
   getStorage,
   ref,
   uploadBytes, 
-  list, 
+  list,
   getDownloadURL,
   deleteObject
 } from "firebase/storage";
@@ -29,6 +29,7 @@ const firebaseConfig = {
 
 const RENDER_INITIAL = 12;
 const RENDER_ADDITIONAL = 6;
+const IMAGE_SIZE_TO = 630;
 
 const app = initializeApp(firebaseConfig);
 const storage = getStorage(app);
@@ -38,6 +39,21 @@ const ImageInputContainer = styled.div`
   width: 630px;
   height: 630px;
   background-color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`
+const Album = styled.div`
+  width: 600px;
+  display: flex;
+  flex-direction: row;
+  justify-content: start;
+  flex-wrap: wrap;
+`
+const AlbumImage = styled.img`
+  width: 200px;
+  height: 200px;
+
 `
 function Uploader() {
   const {
@@ -47,86 +63,103 @@ function Uploader() {
     FB_images_time_set
   } = useFBStore();
   const [imageUpload, setImageUpload] = useState(null);
-  const [imgSrc, setImgSrc] = useState(null);
   const [album, setAlbum] = useState([]);
-  const isMounted = useRef(false);
+  const [blobAlbum, setBlobAlbum] = useState([]);
   const canvasRef = useRef();
 
-  function upload() {
-    if (imageUpload === null) return;
-    const imageRef = ref(storage, `images/${FB_images_time_set()}`);
-    uploadBytes(imageRef, imageUpload).then((snapshot) => {
-      getDownloadURL(snapshot.ref)
-      .then((url) => setImgSrc(url))
-      .catch((error) => console.log(error));
-    });
-    imageUpload.value = '';
-  };
-  
-  useEffect(() => {
-    if (!isMounted.current) {
-      isMounted.current = true;
-    } else {
-      if (imageUpload) {
-        let img = new Image ();
-        img.crossOrigin = 'anonymous';
-        img.src = imgSrc;
-        img.onload = function () {
-          const canvas = canvasRef.current;
-          const ctx = canvas.getContext('2d');
-          const newSize = 630;
-          canvas.width = newSize;
-          canvas.height = newSize;
-          const size = Math.min(img.width, img.height);
-          ctx.drawImage(img,
-            (img.width - size) / 2,
-            (img.height - size) / 2,
-            size,
-            size,
-            0, 0, newSize, newSize);
+  function resizeImage(url) { // url => url
+    return new Promise((resolve, reject) => {
+      let img = new Image ();
+      img.crossOrigin = 'anonymous';
+      img.src = url;
+      img.onload = function () {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        canvas.width = IMAGE_SIZE_TO;
+        canvas.height = IMAGE_SIZE_TO;
+        const size = Math.min(img.width, img.height);
+        ctx.drawImage(img,
+          (img.width - size) / 2,
+          (img.height - size) / 2,
+          size,
+          size,
+          0, 0, IMAGE_SIZE_TO, IMAGE_SIZE_TO);
 
-          let resizedCanvas = document.createElement('canvas');
-          resizedCanvas.width = newSize;
-          resizedCanvas.height = newSize;
-          pica.resize(canvasRef.current, resizedCanvas)
-          .then((res) => {
-            res.toBlob(blob => {
-              const deleteRef = ref(storage, `images/${FB_images_time}`);
-              deleteObject(deleteRef)
-              .then(() => {
-                const imageRef = ref(storage, `images/${FB_images_time}`);
-                uploadBytes(imageRef, blob).then(() => {
-                  console.log('Uploaded')
-                  FB_images_add_unshift(imageRef);
-                  window.location.reload();
-                })
-              });
-            }, 'image/jpg', 0.85);
-          })
-        }
+        let resizedCanvas = document.createElement('canvas');
+        resizedCanvas.width = IMAGE_SIZE_TO;
+        resizedCanvas.height = IMAGE_SIZE_TO;
+        pica.resize(canvasRef.current, resizedCanvas)
+        .then((res) => {
+          res.toBlob(blob => {
+            setBlobAlbum((prev) => [...prev, blob])
+            const url = URL.createObjectURL(blob);
+            resolve(url);
+          });
+        })
+        .catch((err) => reject(err));
       }
-    }
-  }, [imgSrc]);
+      img.onerror = function () {
+        reject(new Error('Image failed to load; error in resizeImage.'));
+      }
+    });
+  }
 
-  const [a, setA] = useState('');
+  async function handleImageInputChange(e) {
+    const inputUrl = URL.createObjectURL(e.target.files[0]);
+    try {
+      const resizedImageUrl = await resizeImage(inputUrl);
+      setAlbum((prev) => {
+        if (prev.length < 8) {
+          return [...prev, resizedImageUrl];
+        } else {
+          alert('최대 8장 까지 게시할 수 있습니다.');
+          return prev;
+        }
+    });
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  async function upload() {
+    if (album === null) return;
+    console.log('Uploading');
+    const time = FB_images_time_set();
+
+    const promise = blobAlbum.map((blob, index) => {
+        const imageRef = ref(storage, `images/${time}/${index}`);
+        const uploadTask = uploadBytes(imageRef, blob);
+        URL.revokeObjectURL(album[index]);
+        return uploadTask;
+      });
+    Promise.all(promise)
+    .then(() => {
+      console.log('Upload completed successfully')
+      window.location.reload();
+    })
+    .catch((error) => {
+      console.log('Error', error)
+    });
+  }
+
   return (
     <ImageInputContainer>
       <div>
-        <input type="file" 
+        <input type="file"
                 multiple 
-                onChange={(e) => {
-                  setImageUpload(e.target.files[0]);
-                  const url = URL.createObjectURL(e.target.files[0]);
-                  console.log(url);
-                  setA(url)
-                }}/>
+                onChange={(e) => handleImageInputChange(e)}/>
         <button onClick={upload}>업로드</button>
         <canvas style={{'display': 'none'}} ref={canvasRef} />
-        <img src={a} />
       </div>
-      <div>
-
-      </div>
+      <Album>
+        {album.map((url, index) => {
+          return <AlbumImage src={url} key={index} onClick={(e) => {
+            setAlbum((prev) => {
+              return prev.filter((image) => image !== url)
+            })
+          }} />
+        })}
+      </Album>
     </ImageInputContainer>
   );
 };
@@ -156,21 +189,22 @@ function ContentImage() {
     FB_images_nextPageToken,
     FB_images_set_nextPageToken
   } = useFBStore();
-  const [imageUrls, setImageUrls] = useState([]);
-  const loader = useRef(null);
   const {
     openModal,
     setModalImgSrc,
     setModalContent,
   } = useStore();
+  const [imageUrls, setImageUrls] = useState([]);
+  const loader = useRef(null);
 
   useEffect(() => {
     // init 함수, 첫 이미지들 렌더링
     function FB_images_init() {
       const firstPage = list(imageListRef, { maxResults: RENDER_INITIAL })
       firstPage.then((res) => {
-        res.items.map((item) => {
-          FB_images_add_push(item);
+        res.prefixes.map((folder) => {
+          const imageRef = ref(storage, `${folder.fullPath}/0`);
+          FB_images_add_push(imageRef);
         });
         FB_images_set_nextPageToken(res.nextPageToken);
       })
