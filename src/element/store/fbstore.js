@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-const useStore = create((set)=>({
+const useFBStore = create((set)=>({
   FB_images : [],
   FB_images_time : null,
   FB_images_nextPageToken : '',
@@ -22,4 +22,4 @@ const useStore = create((set)=>({
   }) )
 }))
 
-export default useStore;
+export default useFBStore;

@@ -11,7 +11,8 @@ import {
   deleteObject
 } from "firebase/storage";
 import Pica from "pica";
-import useStore from './store'
+import useFBStore from './store/fbstore'
+import useStore from './store/store'
 const pica = Pica();
 
 const firebaseConfig = {
@@ -26,14 +27,28 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
+const RENDER_INITIAL = 12;
+const RENDER_ADDITIONAL = 6;
+
 const app = initializeApp(firebaseConfig);
 const storage = getStorage(app);
 const imageListRef = ref(storage, "images/");
 
-function ImageUploader() {
-  const { FB_images, FB_images_add_unshift, FB_images_time, FB_images_time_set } = useStore();
+const ImageInputContainer = styled.div`
+  width: 630px;
+  height: 630px;
+  background-color: white;
+`
+function Uploader() {
+  const {
+    FB_images,
+    FB_images_add_unshift,
+    FB_images_time,
+    FB_images_time_set
+  } = useFBStore();
   const [imageUpload, setImageUpload] = useState(null);
   const [imgSrc, setImgSrc] = useState(null);
+  const [album, setAlbum] = useState([]);
   const isMounted = useRef(false);
   const canvasRef = useRef();
 
@@ -51,23 +66,25 @@ function ImageUploader() {
   useEffect(() => {
     if (!isMounted.current) {
       isMounted.current = true;
-    } else {if (imageUpload) {
-      let img = new Image ();
-      img.crossOrigin = 'anonymous';
-      img.src = imgSrc;
-      img.onload = function () {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        const newSize = 630;
-        canvas.width = newSize;
-        canvas.height = newSize;
-        const size = Math.min(img.width, img.height);
-        ctx.drawImage(img,
-          (img.width - size) / 2,
-          (img.height - size) / 2,
-          size,
-          size,
-          0, 0, newSize, newSize);
+    } else {
+      if (imageUpload) {
+        let img = new Image ();
+        img.crossOrigin = 'anonymous';
+        img.src = imgSrc;
+        img.onload = function () {
+          const canvas = canvasRef.current;
+          const ctx = canvas.getContext('2d');
+          const newSize = 630;
+          canvas.width = newSize;
+          canvas.height = newSize;
+          const size = Math.min(img.width, img.height);
+          ctx.drawImage(img,
+            (img.width - size) / 2,
+            (img.height - size) / 2,
+            size,
+            size,
+            0, 0, newSize, newSize);
+
           let resizedCanvas = document.createElement('canvas');
           resizedCanvas.width = newSize;
           resizedCanvas.height = newSize;
@@ -81,6 +98,7 @@ function ImageUploader() {
                 uploadBytes(imageRef, blob).then(() => {
                   console.log('Uploaded')
                   FB_images_add_unshift(imageRef);
+                  window.location.reload();
                 })
               });
             }, 'image/jpg', 0.85);
@@ -90,12 +108,26 @@ function ImageUploader() {
     }
   }, [imgSrc]);
 
+  const [a, setA] = useState('');
   return (
-    <div>
-      <input type="file" onChange={(e) => setImageUpload(e.target.files[0])}/>
-      <button onClick={upload}>업로드</button>  
-      <canvas style={{'display': 'none'}} ref={canvasRef} />
-    </div>
+    <ImageInputContainer>
+      <div>
+        <input type="file" 
+                multiple 
+                onChange={(e) => {
+                  setImageUpload(e.target.files[0]);
+                  const url = URL.createObjectURL(e.target.files[0]);
+                  console.log(url);
+                  setA(url)
+                }}/>
+        <button onClick={upload}>업로드</button>
+        <canvas style={{'display': 'none'}} ref={canvasRef} />
+        <img src={a} />
+      </div>
+      <div>
+
+      </div>
+    </ImageInputContainer>
   );
 };
 
@@ -123,11 +155,32 @@ function ContentImage() {
     FB_images_add_push,
     FB_images_nextPageToken,
     FB_images_set_nextPageToken
-  } = useStore();
+  } = useFBStore();
   const [imageUrls, setImageUrls] = useState([]);
   const loader = useRef(null);
+  const {
+    openModal,
+    setModalImgSrc,
+    setModalContent,
+  } = useStore();
 
   useEffect(() => {
+    // init 함수, 첫 이미지들 렌더링
+    function FB_images_init() {
+      const firstPage = list(imageListRef, { maxResults: RENDER_INITIAL })
+      firstPage.then((res) => {
+        res.items.map((item) => {
+          FB_images_add_push(item);
+        });
+        FB_images_set_nextPageToken(res.nextPageToken);
+      })
+    }
+    FB_images_init()
+    // .then
+  }, []);
+
+  useEffect(() => {
+    // imageUrls에 따라 fetch
     async function fetchUrls() {
       const urls = await Promise.all(
         FB_images.map((ref) => getDownloadURL(ref))
@@ -136,11 +189,12 @@ function ContentImage() {
     }
     fetchUrls();
   }, [FB_images]);
-  
+
   function loadMore() {
+    // observ 감지해서 추가 렌더링
     console.log('Loading more...');
     const nextPage = list(imageListRef, { 
-      maxResults: 3,
+      maxResults: RENDER_ADDITIONAL,
       pageToken: FB_images_nextPageToken,
     })
     nextPage.then((res) => {
@@ -155,6 +209,7 @@ function ContentImage() {
   }
 
   useEffect(() => {
+    // observer 부여, observe, unobserve
     const options = {
       root: null,
       rootMargin: '0px',
@@ -172,61 +227,105 @@ function ContentImage() {
     }
   }, [imageUrls]);
 
+  function handleFeedClick(e) {
+    e.preventDefault();
+    setModalImgSrc(e.target.src);
+    openModal();
+    setModalContent(<Feed />);
+  }
+
   return (
     <Container>
       <Contents>
         {imageUrls.map((url, index, arr) => {
           if (url === arr[arr.length - 1]) {
-            return <Content ref={loader} key={index} src={url} loading="lazy" />
+            return <Content ref={loader} 
+                            onClick={handleFeedClick} 
+                            key={index} 
+                            src={url} 
+                            loading="lazy" />
           }
-          return <Content key={index} src={url} loading="lazy" />
+          return <Content onClick={handleFeedClick} 
+                          key={index} 
+                          src={url} 
+                          loading="lazy" />
         })}
       </Contents>
     </Container>
   )
 }
 
+const Scrim = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`
+function Modal({ content }) {
+  const {
+    modalOpen,
+    closeModal,
+  } = useStore();
+
+  if (modalOpen) {
+    return (
+      <Scrim onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          closeModal();
+        }}}>
+        {content}
+      </Scrim>
+    )
+  }
+}
+
+const FeedContents = styled.div`
+  display: flex;
+  flex-direction: row;
+  z-index: 1001;
+`
+const FeedImg = styled.img`
+  width: 630px;
+  height: 630px;
+  z-index: 1002;
+  `
+const FeedComment = styled.div`
+  width: 350px;
+  height: 630px;
+  background-color: white;
+  z-index: 1002;
+`
+function Feed() {
+  const {modalImgSrc} = useStore();
+  return (
+    <FeedContents>
+      <FeedImg src={modalImgSrc} />
+      <FeedComment />
+    </FeedContents>
+  )
+}
+
 function Home() {
   const {
-    FB_images,
-    FB_images_add_push,
-    FB_images_nextPageToken,
-    FB_images_set_nextPageToken
+    openModal,
+    modalContent,
+    setModalContent,
   } = useStore();
-  function FB_images_init() {
-    const firstPage = list(imageListRef, { maxResults: 12 })
-    firstPage.then((res) => {
-      res.items.map((item) => {
-        FB_images_add_push(item);
-      });
-      FB_images_set_nextPageToken(res.nextPageToken);
-    })
-  }
-
-  function handleRendering() {
-    const nextPage = list(imageListRef, { 
-      maxResults: 6,
-      pageToken: FB_images_nextPageToken,
-    })
-    nextPage.then((res) => {
-      res.items.map((item) => {
-        FB_images_add_push(item);
-      });
-      FB_images_set_nextPageToken(res.nextPageToken);
-    })
-  }
-  
-  useEffect(() => {
-    FB_images_init()
-    // .then
-  }, []);
-
   return (
-    <div>
-      <ImageUploader />
-      <button onClick={handleRendering}>렌더링</button>
+    <React.Fragment>
+      <button onClick={() => {
+        openModal();
+        setModalContent(<Uploader />);
+      }}>만들기</button>
       <ContentImage />
-    </div>
+      <Modal content={modalContent} />  {/* <Feed />, <Uploader /> */}
+    </React.Fragment>
   )
 }
 
