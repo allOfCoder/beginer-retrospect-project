@@ -142,7 +142,6 @@ function Uploader() {
     <ImageInputContainer>
       <div>
         <input type="file"
-                multiple 
                 onChange={(e) => handleImageInputChange(e)}/>
         <button onClick={upload}>업로드</button>
         <canvas style={{'display': 'none'}} ref={canvasRef} />
@@ -405,18 +404,18 @@ function Carousel() {
       {carouselPage < feedUrls.length - 1 ? 
       <CarouselNavigate direction={'right'} onClick={() => nextPage()} /> : null}
       
-      <CarouselPagination>
-      {feedUrls.map((a, index) => {
-        return <Circle selected={carouselPage === index} key={index} />
-      })}
-      </CarouselPagination>
-      
       <CarouselFrame ref={frame}>
         {feedUrls[0] ? null : <FeedImg src={modalImgSrc} />}
         {feedUrls.map((url, index) => {
           return <FeedImg src={url} key={index} />;
         })}
       </CarouselFrame>
+      
+      <CarouselPagination>
+      {feedUrls.map((a, index) => {
+        return <Circle selected={carouselPage === index} key={index} />
+      })}
+      </CarouselPagination>
     </CarouselContainer>
   )
 }
