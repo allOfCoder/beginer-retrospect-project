@@ -3,6 +3,8 @@ import { create } from 'zustand'
 const useStore = create((set)=>({
   modalImgSrc : '',
   setModalImgSrc : (val) => set( (state) => ({ modalImgSrc : val }) ),
+  modalImgRef : '',
+  setModalImgRef : (val) => set( (state) => ({ modalImgRef : val }) ),
   modalOpen : false,
   openModal : () => set( () => ({ modalOpen : true }) ),
   closeModal : () => set( () => ({ modalOpen : false }) ),

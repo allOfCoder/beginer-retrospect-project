@@ -7,6 +7,7 @@ import {
   ref,
   uploadBytes, 
   list,
+  listAll,
   getDownloadURL,
   deleteObject
 } from "firebase/storage";
@@ -57,12 +58,8 @@ const AlbumImage = styled.img`
 `
 function Uploader() {
   const {
-    FB_images,
-    FB_images_add_unshift,
-    FB_images_time,
-    FB_images_time_set
+    FB_images_time_set,
   } = useFBStore();
-  const [imageUpload, setImageUpload] = useState(null);
   const [album, setAlbum] = useState([]);
   const [blobAlbum, setBlobAlbum] = useState([]);
   const canvasRef = useRef();
@@ -112,7 +109,7 @@ function Uploader() {
         if (prev.length < 8) {
           return [...prev, resizedImageUrl];
         } else {
-          alert('최대 8장 까지 게시할 수 있습니다.');
+          alert('최대 8장까지 게시할 수 있습니다.');
           return prev;
         }
     });
@@ -125,7 +122,6 @@ function Uploader() {
     if (album === null) return;
     console.log('Uploading');
     const time = FB_images_time_set();
-
     const promise = blobAlbum.map((blob, index) => {
         const imageRef = ref(storage, `images/${time}/${index}`);
         const uploadTask = uploadBytes(imageRef, blob);
@@ -192,11 +188,12 @@ function ContentImage() {
   const {
     openModal,
     setModalImgSrc,
+    setModalImgRef,
     setModalContent,
   } = useStore();
   const [imageUrls, setImageUrls] = useState([]);
   const loader = useRef(null);
-
+  
   useEffect(() => {
     // init 함수, 첫 이미지들 렌더링
     function FB_images_init() {
@@ -212,7 +209,7 @@ function ContentImage() {
     FB_images_init()
     // .then
   }, []);
-
+  
   useEffect(() => {
     // imageUrls에 따라 fetch
     async function fetchUrls() {
@@ -223,25 +220,7 @@ function ContentImage() {
     }
     fetchUrls();
   }, [FB_images]);
-
-  function loadMore() {
-    // observ 감지해서 추가 렌더링
-    console.log('Loading more...');
-    const nextPage = list(imageListRef, { 
-      maxResults: RENDER_ADDITIONAL,
-      pageToken: FB_images_nextPageToken,
-    })
-    nextPage.then((res) => {
-      if (FB_images_nextPageToken) {
-        res.items.map((item) => {
-          FB_images_add_push(item);
-        });
-        FB_images_set_nextPageToken(res.nextPageToken);
-      }
-    }
-    )
-  }
-
+  
   useEffect(() => {
     // observer 부여, observe, unobserve
     const options = {
@@ -260,29 +239,47 @@ function ContentImage() {
       observer.observe(loader.current)
     }
   }, [imageUrls]);
-
-  function handleFeedClick(e) {
+  
+  function loadMore() {
+    // observ 감지해서 추가 렌더링
+    console.log('Loading more...');
+    const nextPage = list(imageListRef, { 
+      maxResults: RENDER_ADDITIONAL,
+      pageToken: FB_images_nextPageToken,
+    })
+    nextPage.then((res) => {
+      if (FB_images_nextPageToken) {
+        res.items.map((item) => {
+          FB_images_add_push(item);
+        });
+        FB_images_set_nextPageToken(res.nextPageToken);
+      }
+    })
+  }
+  
+  function handleFeedClick(e, index) {
     e.preventDefault();
     setModalImgSrc(e.target.src);
+    setModalImgRef(FB_images[index].parent);
     openModal();
     setModalContent(<Feed />);
   }
-
+  
   return (
     <Container>
       <Contents>
         {imageUrls.map((url, index, arr) => {
           if (url === arr[arr.length - 1]) {
             return <Content ref={loader} 
-                            onClick={handleFeedClick} 
+                            onClick={(e) => handleFeedClick(e, index)} 
                             key={index} 
                             src={url} 
                             loading="lazy" />
           }
-          return <Content onClick={handleFeedClick} 
+          return <Content onClick={(e) => handleFeedClick(e, index)} 
                           key={index} 
                           src={url} 
-                          loading="lazy" />
+                          loading="lazy" /> // if 없앨 수 있는 지 테스트 하기
         })}
       </Contents>
     </Container>
@@ -319,16 +316,116 @@ function Modal({ content }) {
   }
 }
 
+const CarouselContainer = styled.div`
+  width: 630px;
+  height: 630px;
+  overflow: hidden;
+  position: relative; 
+`
+const CarouselFrame = styled.div`
+  width: calc(8 * 630px);
+  height: 630px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 0;
+`
+const FeedImg = styled.img`
+  width: 630px;
+  height: 630px;
+  margin: 0;
+`
+const CarouselNavigate = styled.button`
+  width: 30px;
+  height: 30px;
+  border: 1px solid black;
+  position: absolute;
+  right: ${(props) => (props.direction === 'right' ? '0' : null)};
+  left: ${(props) => (props.direction === 'left' ? '0' : null)};
+  top: 50%;
+  z-index: 1010;
+`
+const CarouselPagination = styled.div`
+  display: flex;
+  justify-content: center;
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%);
+  bottom: 3%;
+  > * {
+    margin: 2px;
+  }
+`
+const Circle = styled.div`
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: ${(props) => (props.selected ? 
+  'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.5)')};
+  bottom: 30px;
+  z-index: 1010;
+`
+function Carousel() {
+  const {modalImgRef, modalImgSrc} = useStore();
+  const [feedUrls, setFeedUrls] = useState([]);
+  const [carouselPage, setCarouselPage] = useState(0);
+  const frame = useRef();
+
+  useEffect(() => {
+    async function getFeedUrls() {
+      const res = await listAll(modalImgRef);
+      const urls = [];
+      for (const item of res.items) {
+        const url = await getDownloadURL(item);
+        urls.push(url);
+      }
+      setFeedUrls(prev => [...prev, ...urls]);
+    }
+    getFeedUrls();
+  }, [])
+
+  function previousPage() {
+    setCarouselPage((prev) => {
+      const next = prev - 1;
+      frame.current.style.transform = `translate(-${next * 630}px)`
+      return next
+    })
+  }
+  function nextPage() {
+    setCarouselPage((prev) => {
+      const next = prev + 1
+      frame.current.style.transform = `translate(-${next * 630}px)`
+      return next
+    })
+  }
+  return (
+    <CarouselContainer>
+      {carouselPage > 0 ? 
+      <CarouselNavigate direction={'left'} onClick={() => previousPage()} /> : null}
+      {carouselPage < feedUrls.length - 1 ? 
+      <CarouselNavigate direction={'right'} onClick={() => nextPage()} /> : null}
+      
+      <CarouselPagination>
+      {feedUrls.map((a, index) => {
+        return <Circle selected={carouselPage === index} key={index} />
+      })}
+      </CarouselPagination>
+      
+      <CarouselFrame ref={frame}>
+        {feedUrls[0] ? null : <FeedImg src={modalImgSrc} />}
+        {feedUrls.map((url, index) => {
+          return <FeedImg src={url} key={index} />;
+        })}
+      </CarouselFrame>
+    </CarouselContainer>
+  )
+}
+
 const FeedContents = styled.div`
   display: flex;
   flex-direction: row;
   z-index: 1001;
 `
-const FeedImg = styled.img`
-  width: 630px;
-  height: 630px;
-  z-index: 1002;
-  `
 const FeedComment = styled.div`
   width: 350px;
   height: 630px;
@@ -336,10 +433,9 @@ const FeedComment = styled.div`
   z-index: 1002;
 `
 function Feed() {
-  const {modalImgSrc} = useStore();
   return (
     <FeedContents>
-      <FeedImg src={modalImgSrc} />
+      <Carousel />
       <FeedComment />
     </FeedContents>
   )

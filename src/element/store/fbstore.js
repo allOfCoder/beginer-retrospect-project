@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 const useFBStore = create((set)=>({
-  FB_images : [],
+  FB_images : [], // 썸네일 이미지들의 reference가 들어있음
   FB_images_time : null,
   FB_images_nextPageToken : '',
   FB_images_time_set : () => {
