@@ -11,10 +11,17 @@ import {
   getDownloadURL,
   deleteObject
 } from "firebase/storage";
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signOut,
+} from 'firebase/auth';
 import Pica from "pica";
-import useFBStore from './store/fbstore'
-import useStore from './store/store'
-const pica = Pica();
+import useStorageStore from './store/fbstorage';
+import useAuthStore from './store/fbauth';
+import useStore from './store/store';
 
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
@@ -28,6 +35,7 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
+const pica = Pica();
 const RENDER_INITIAL = 12;
 const RENDER_ADDITIONAL = 6;
 const IMAGE_SIZE_TO = 630;
@@ -35,6 +43,8 @@ const IMAGE_SIZE_TO = 630;
 const app = initializeApp(firebaseConfig);
 const storage = getStorage(app);
 const imageListRef = ref(storage, "images/");
+
+const auth = getAuth(app);
 
 const ImageInputContainer = styled.div`
   width: 630px;
@@ -58,8 +68,8 @@ const AlbumImage = styled.img`
 `
 function Uploader() {
   const {
-    FB_images_time_set,
-  } = useFBStore();
+    STORAGE_imagesTimeSet,
+  } = useStorageStore();
   const [album, setAlbum] = useState([]);
   const [blobAlbum, setBlobAlbum] = useState([]);
   const canvasRef = useRef();
@@ -121,7 +131,7 @@ function Uploader() {
   async function upload() {
     if (album === null) return;
     console.log('Uploading');
-    const time = FB_images_time_set();
+    const time = STORAGE_imagesTimeSet();
     const promise = blobAlbum.map((blob, index) => {
         const imageRef = ref(storage, `images/${time}/${index}`);
         const uploadTask = uploadBytes(imageRef, blob);
@@ -130,7 +140,6 @@ function Uploader() {
       });
     Promise.all(promise)
     .then(() => {
-      console.log('Upload completed successfully')
       window.location.reload();
     })
     .catch((error) => {
@@ -179,11 +188,11 @@ const Content = styled.img`
 `
 function ContentImage() {
   const {
-    FB_images,
-    FB_images_add_push,
-    FB_images_nextPageToken,
-    FB_images_set_nextPageToken
-  } = useFBStore();
+    STORAGE_images,
+    STORAGE_imagesAddPush,
+    STORAGE_imagesNextPageToken,
+    STORAGE_imagesSetNextPageToken
+  } = useStorageStore();
   const {
     openModal,
     setModalImgSrc,
@@ -195,17 +204,17 @@ function ContentImage() {
   
   useEffect(() => {
     // init 함수, 첫 이미지들 렌더링
-    function FB_images_init() {
+    function STORAGE_images_init() {
       const firstPage = list(imageListRef, { maxResults: RENDER_INITIAL })
       firstPage.then((res) => {
         res.prefixes.map((folder) => {
           const imageRef = ref(storage, `${folder.fullPath}/0`);
-          FB_images_add_push(imageRef);
+          STORAGE_imagesAddPush(imageRef);
         });
-        FB_images_set_nextPageToken(res.nextPageToken);
+        STORAGE_imagesSetNextPageToken(res.nextPageToken);
       })
     }
-    FB_images_init()
+    STORAGE_images_init()
     // .then
   }, []);
   
@@ -213,12 +222,12 @@ function ContentImage() {
     // imageUrls에 따라 fetch
     async function fetchUrls() {
       const urls = await Promise.all(
-        FB_images.map((ref) => getDownloadURL(ref))
+        STORAGE_images.map((ref) => getDownloadURL(ref))
       );
       setImageUrls(urls);
     }
     fetchUrls();
-  }, [FB_images]);
+  }, [STORAGE_images]);
   
   useEffect(() => {
     // observer 부여, observe, unobserve
@@ -241,17 +250,16 @@ function ContentImage() {
   
   function loadMore() {
     // observ 감지해서 추가 렌더링
-    console.log('Loading more...');
     const nextPage = list(imageListRef, { 
       maxResults: RENDER_ADDITIONAL,
-      pageToken: FB_images_nextPageToken,
+      pageToken: STORAGE_imagesNextPageToken,
     })
     nextPage.then((res) => {
-      if (FB_images_nextPageToken) {
+      if (STORAGE_imagesNextPageToken) {
         res.items.map((item) => {
-          FB_images_add_push(item);
+          STORAGE_imagesAddPush(item);
         });
-        FB_images_set_nextPageToken(res.nextPageToken);
+        STORAGE_imagesSetNextPageToken(res.nextPageToken);
       }
     })
   }
@@ -259,7 +267,7 @@ function ContentImage() {
   function handleFeedClick(e, index) {
     e.preventDefault();
     setModalImgSrc(e.target.src);
-    setModalImgRef(FB_images[index].parent);
+    setModalImgRef(STORAGE_images[index].parent);
     openModal();
     setModalContent(<Feed />);
   }
@@ -268,17 +276,11 @@ function ContentImage() {
     <Container>
       <Contents>
         {imageUrls.map((url, index, arr) => {
-          if (url === arr[arr.length - 1]) {
-            return <Content ref={loader} 
-                            onClick={(e) => handleFeedClick(e, index)} 
-                            key={index} 
-                            src={url} 
-                            loading="lazy" />
-          }
-          return <Content onClick={(e) => handleFeedClick(e, index)} 
+          return <Content ref={loader} 
+                          onClick={(e) => handleFeedClick(e, index)} 
                           key={index} 
                           src={url} 
-                          loading="lazy" /> // if 없앨 수 있는 지 테스트 하기
+                          loading="lazy" />
         })}
       </Contents>
     </Container>
@@ -297,10 +299,11 @@ const Scrim = styled.div`
   align-items: center;
   z-index: 1000;
 `
-function Modal({ content }) {
+function Modal() {
   const {
     modalOpen,
     closeModal,
+    modalContent,
   } = useStore();
 
   if (modalOpen) {
@@ -309,7 +312,7 @@ function Modal({ content }) {
         if (e.target === e.currentTarget) {
           closeModal();
         }}}>
-        {content}
+        {modalContent}
       </Scrim>
     )
   }
@@ -442,18 +445,47 @@ function Feed() {
 
 function Home() {
   const {
+    AUTH_uid,
+    AUTH_setUid
+  } = useAuthStore();
+  const {
     openModal,
-    modalContent,
     setModalContent,
   } = useStore();
+
+  function handleLogout() {
+    signOut(auth)
+    window.location.reload();
+  }
+
+  useEffect(() => {
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        AUTH_setUid(user.uid);
+      } else {
+      }
+    });
+  }, []);
+
   return (
     <React.Fragment>
-      <button onClick={() => {
-        openModal();
-        setModalContent(<Uploader />);
-      }}>만들기</button>
+      <div>
+        <button onClick={() => {
+          openModal();
+          setModalContent(<Uploader />);
+        }}>만들기</button>
+
+        {AUTH_uid
+          ? <button onClick={() =>{handleLogout()}}>로그아웃</button>
+          : <Link to={'login'}>
+            <button>
+              로그인
+            </button>
+          </Link>
+        }
+      </div>
       <ContentImage />
-      <Modal content={modalContent} />  {/* <Feed />, <Uploader /> */}
+      <Modal />  {/* <Feed />, <Uploader /> */}
     </React.Fragment>
   )
 }
