@@ -5,9 +5,9 @@ import {
   Routes,
 } from "react-router-dom";
 import './App.css';
-import Home from './element/Home'
-import Feed from './element/Feed'
-import Login from './element/Login';
+import Home from './pages/Home'
+import Profile from './pages/Profile'
+import Login from './pages/Login';
 
 function App() {
   return (
@@ -16,7 +16,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />}></Route>
             <Route path="/login" element={<Login />}></Route>
-            <Route path="/feed/:id" element={<Feed />}></Route>
+            <Route path="/:id" element={<Profile />}></Route>
           </Routes>
         </BrowserRouter>
       </div>

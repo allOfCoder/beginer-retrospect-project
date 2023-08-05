@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { auth } from '../firebaseConfig'
 
 const useAuthStore = create((set)=>({
   AUTH_uid : null,
@@ -7,5 +8,13 @@ const useAuthStore = create((set)=>({
     return Promise.resolve(val);
   }
 }))
+
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    useAuthStore.getState().AUTH_setUid(user.uid);
+  } else {
+    useAuthStore.getState().AUTH_setUid(null);
+  }
+});
 
 export default useAuthStore;
