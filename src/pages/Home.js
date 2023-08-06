@@ -7,6 +7,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { ref as dbRef, set, get, child } from "firebase/database";
 import Pica from "pica";
 import ContentImage from '../components/ContentImage'
+import Modal from '../components/Modal'
 import useStorageStore from '../store/fbstorage';
 import useAuthStore from '../store/fbauth';
 import useStore from '../store/store';
@@ -135,37 +136,6 @@ function Uploader() {
     </ImageInputContainer>
   );
 };
-
-const Scrim = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-`
-function Modal() {
-  const {
-    modalOpen,
-    closeModal,
-    modalContent,
-  } = useStore();
-
-  if (modalOpen) {
-    return (
-      <Scrim onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          closeModal();
-        }}}>
-        {modalContent}
-      </Scrim>
-    )
-  }
-}
 
 function Home() {
   const {

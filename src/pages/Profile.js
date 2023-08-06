@@ -4,6 +4,7 @@ import { styled } from "styled-components";
 import { auth, db } from '../firebaseConfig'
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { ref, set, get, push } from "firebase/database";
+import Modal from '../components/Modal'
 import useAuthStore from '../store/fbauth';
 import ProfileImage from '../components/ProfileImage'
 
@@ -37,8 +38,8 @@ function Profile() {
         설정 영역
         <button onClick={handleClick}>버튼</button>
       </div>
-
       <ProfileImage />
+      <Modal />  {/* <Feed />, <Uploader /> */}
     </React.Fragment>
   )
 }

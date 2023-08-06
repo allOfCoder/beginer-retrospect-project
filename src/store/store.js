@@ -10,6 +10,9 @@ const useStore = create((set)=>({
   closeModal : () => set( () => ({ modalOpen : false }) ),
   modalContent : <></>,
   setModalContent : (val) => set( () => ({ modalContent : val }) ),
+  feedMenuOpen : false,
+  openFeedMenu : () => set( () => ({ feedMenuOpen : true }) ),
+  closeFeedMenu : () => set( () => ({ feedMenuOpen : false }) ),
 }))
 
 export default useStore;
