@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { styled } from "styled-components";
+import styled from "styled-components";
 import { storage, db } from '../firebaseConfig'
-import { 
-  getStorage,
+import {
   ref as storageRef,
   list,
   getDownloadURL,
@@ -54,6 +53,7 @@ function ContentImage() {
   const [imageUrls, setImageUrls] = useState([]);
   const loader = useRef(null);
   const imageListRef = storageRef(storage, "images/");
+  const addedImagesSet = useRef(new Set()).current;
   
   useEffect(() => {
     // 첫 이미지들 렌더링
@@ -62,7 +62,10 @@ function ContentImage() {
       firstPage.then((res) => {
         res.prefixes.map((folder) => {
           const imageRef = storageRef(storage, `${folder.fullPath}/0`);
-          STORAGE_imagesAddPush(imageRef);
+          if (!addedImagesSet.has(imageRef.fullPath)) {
+            addedImagesSet.add(imageRef.fullPath);
+            STORAGE_imagesAddPush(imageRef);
+          }
         });
         STORAGE_imagesSetNextPageToken(res.nextPageToken);
       })
@@ -109,7 +112,10 @@ function ContentImage() {
     nextPage.then((res) => {
       if (STORAGE_imagesNextPageToken) {
         res.items.map((item) => {
-          STORAGE_imagesAddPush(item);
+          if (!addedImagesSet.has(item.fullPath)) {
+            addedImagesSet.add(item.fullPath);
+            STORAGE_imagesAddPush(item);
+          }
         });
         STORAGE_imagesSetNextPageToken(res.nextPageToken);
       }

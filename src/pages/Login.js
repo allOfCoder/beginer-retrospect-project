@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { styled } from "styled-components";
+import styled from "styled-components";
 import { storage, auth } from '../firebaseConfig'
 import {
   signInWithPopup,

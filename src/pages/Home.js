@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { styled } from "styled-components";
+import styled from "styled-components";
 import { storage, auth, db } from '../firebaseConfig'
 import { ref as storageRef, uploadBytes } from "firebase/storage";
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { ref as dbRef, set, get, child } from "firebase/database";
+import { ref as dbRef, set, get, child, push } from "firebase/database";
 import Pica from "pica";
 import ContentImage from '../components/ContentImage'
 import Modal from '../components/Modal'
@@ -39,11 +39,16 @@ function Uploader() {
   const {
     STORAGE_imagesTimeSet,
   } = useStorageStore();
+  const {
+    AUTH_uid,
+    AUTH_userName,
+  } = useAuthStore();
   const [album, setAlbum] = useState([]);
   const [blobAlbum, setBlobAlbum] = useState([]);
   const canvasRef = useRef();
 
-  function resizeImage(url) { // url => url
+  function resizeImage(url) {
+    // 이미지 앨범에 추가
     return new Promise((resolve, reject) => {
       let img = new Image ();
       img.crossOrigin = 'anonymous';
@@ -100,14 +105,22 @@ function Uploader() {
   async function upload() {
     if (album === null) return;
     console.log('Uploading');
-    const time = STORAGE_imagesTimeSet();
-    const promise = blobAlbum.map((blob, index) => {
-        const imageRef = storageRef(storage, `images/${time}/${index}`);
-        const uploadTask = uploadBytes(imageRef, blob);
-        URL.revokeObjectURL(album[index]);
-        return uploadTask;
-      });
-    Promise.all(promise)
+    const name = STORAGE_imagesTimeSet();
+    const promise1 = blobAlbum.map((blob, index) => {
+      const imageRef = storageRef(storage, `images/${name}/${index}`);
+      const uploadTask = uploadBytes(imageRef, blob);
+      URL.revokeObjectURL(album[index]);
+      return uploadTask;
+    });
+    
+    const promise2 = get(child(dbRef(db, `users/${AUTH_uid}`), 'feeds'))
+    .then((snapshot) => {
+      set(dbRef(db, `all_feeds/${name}`), {author: AUTH_userName});
+      push(dbRef(db, `users/${AUTH_uid}/feeds`), {name: name});
+    })
+    
+
+    Promise.all(promise1, promise2)// 
     .then(() => {
       window.location.reload();
     })
@@ -115,7 +128,7 @@ function Uploader() {
       console.log('Error', error)
     });
   }
-
+  
   return (
     <ImageInputContainer>
       <div>
@@ -149,8 +162,7 @@ function Home() {
   const [userId, setUserId] = useState();
 
   function handleLogout() {
-    signOut(auth)
-    window.location.reload();
+    signOut(auth);
   }
 
   const userRef = dbRef(db, 'users/' + AUTH_uid);
@@ -162,33 +174,41 @@ function Home() {
     console.error(error);
   });
 
-  return (
-    <React.Fragment>
+  function UserActions({ userId }) {
+    return (
       <div>
         <button onClick={() => {
           openModal();
           setModalContent(<Uploader />);
-        }}>만들기</button>
+        }}>업로드</button>
 
-        {AUTH_uid
-          ? <button onClick={() =>{handleLogout()}}>로그아웃</button>
-          : <Link to={'login'}>
-            <button>
-              로그인
-            </button>
-          </Link>
-        }
+        <button onClick={handleLogout}>로그아웃</button>
 
         <Link to={userId}>
-            <button>
-              프로필
-            </button>
-          </Link>
+          <button>프로필</button>
+        </Link>
       </div>
+    );
+  }
+
+  function GuestActions() {
+    return (
+      <div>
+        <Link to="login">
+          <button>로그인</button>
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <React.Fragment>
+      {AUTH_uid ? <UserActions userId={userId} /> : <GuestActions />}
+
       <ContentImage />
-      <Modal />  {/* <Feed />, <Uploader /> */}
+      <Modal /> {/* <Feed />, <Uploader /> */}
     </React.Fragment>
-  )
+  );  
 }
 
 export default Home;

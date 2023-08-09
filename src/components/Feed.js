@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { styled } from "styled-components";
-import { listAll, getDownloadURL } from "firebase/storage";
+import styled from "styled-components";
+import { storage, db } from '../firebaseConfig'
+import { ref as storageRef, deleteObject, listAll, getDownloadURL } from "firebase/storage";
+import { ref as dbRef, query, get, orderByValue, equalTo, child, remove,
+  startAt, orderByChild} from "firebase/database";
 import useStore from '../store/store';
+import useAuthStore from '../store/fbauth';
 
 const CarouselContainer = styled.div`
   width: 630px;
@@ -99,7 +103,8 @@ function Carousel() {
       <CarouselNavigate $direction={'right'} onClick={() => nextPage()} /> : null}
       
       <CarouselPagination>
-      {feedUrls.map((a, index) => {
+      {feedUrls.map((a, index, arr) => {
+        if (arr.length === 1) return
         return <Circle selected={carouselPage === index} key={index} />
       })}
       </CarouselPagination>
@@ -142,13 +147,45 @@ const MenuButton = styled.div`
 `
 function FeedMenu() {
   const {
+    modalImgRef,
     feedMenuOpen,
     openFeedMenu,
     closeFeedMenu,
   } = useStore();
+  const {AUTH_uid} = useAuthStore();
 
-  function handleDeleteButton() {
-    console.log('삭제')
+  async function handleDeleteButton() {
+    const userConfirmed = window.confirm("정말 삭제하시겠습니까?");
+    if (!userConfirmed) {
+      return;
+    }
+    const storageFeedRef = storageRef(storage, `/images/${modalImgRef.name}`);
+    const promise1 = listAll(storageFeedRef)
+    .then(result => {
+      const deletionPromises = result.items.map(itemRef => deleteObject(itemRef));
+      return Promise.all(deletionPromises);
+    })
+
+    const dbFeedRef = dbRef(db, `/all_feeds/${modalImgRef.name}`);
+    const promise2 = remove(dbFeedRef);
+
+    const dbUserFeedRef = dbRef(db, `/users/${AUTH_uid}/feeds`);
+    const specificValueQuery = query(dbUserFeedRef, orderByChild('name'), equalTo(Number(modalImgRef.name)));
+    const promise3 = get(specificValueQuery).then(snapshot => {
+      let key;
+      snapshot.forEach(childSnapshot => {
+        key = childSnapshot.key;
+      });
+      return remove(child(dbUserFeedRef, key));
+    });
+
+    await Promise.all([promise1, promise2, promise3])
+    .then(() => {
+      window.location.reload();
+    })
+    .catch((error) => {
+      console.error(error);
+    }); 
   }
 
   if (feedMenuOpen) {
@@ -187,11 +224,10 @@ const FeedMenuButton = styled.div`
   border: 1px solid black;
 `
 function Feed() {
-  const {feedMenuOpen, openFeedMenu} = useStore();
+  const {modalImgRef, openFeedMenu} = useStore();
+  const {AUTH_uid} = useAuthStore();
 
   function handleFeedMenuOpen() {
-    console.log('feed menu open');
-    console.log(feedMenuOpen);
     openFeedMenu();
   }
 

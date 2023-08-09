@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { styled } from "styled-components";
+import styled from "styled-components";
 import { storage, db } from '../firebaseConfig'
 import { 
   getStorage,
@@ -64,7 +64,6 @@ function ProfileImage() {
       let snapshotFeedNames = [];
       await get(child(userRef, 'feeds')).then((snapshot) => {
         snapshotFeedNames = snapshot.val();
-        // setFeedNames(snapshotFeedNames);
       });
       const refs = await Promise.all(
         snapshotFeedNames.map((feedName) => {
@@ -77,7 +76,7 @@ function ProfileImage() {
       for (let i = 0; i < 1 + Math.floor(feedNames.length / 12); i++) {
         const start = i * 12;
         const end = (i + 1) * 12;
-        const imagesArraySection = refs.slice(start, end);
+        const imagesArraySection = [...refs].reverse().slice(start, end);
         newImagesArrays.push(imagesArraySection)
       }
       setImagesArrays((prev) => [...prev, ...newImagesArrays]); 
@@ -93,7 +92,6 @@ function ProfileImage() {
   
   async function loadMore() {
     if (!imagesArrays[renderCount]) return;
-    console.log('loadMore called');
     const urls = await Promise.all(
       imagesArrays[renderCount].map((ref) => {
         return getDownloadURL(ref)
