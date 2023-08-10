@@ -4,7 +4,7 @@ import styled from "styled-components";
 import { storage, auth, db } from '../firebaseConfig'
 import { ref as storageRef, uploadBytes } from "firebase/storage";
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { ref as dbRef, set, get, child, push } from "firebase/database";
+import { ref as dbRef, set, get, child, push, query, orderByChild, equalTo } from "firebase/database";
 import Pica from "pica";
 import ContentImage from '../components/ContentImage'
 import Modal from '../components/Modal'
@@ -14,6 +14,104 @@ import useStore from '../store/store';
 import { IMAGE_SIZE_TO } from '../constants';
 
 const pica = Pica();
+
+const CreateNameScrim = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.8);
+`
+const CreateNameContainer = styled.div`
+  width: 70%;
+  height: 70%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  background-color: white;
+`
+function CreateNameModal() {
+  const {AUTH_uid} = useAuthStore();
+  const [inputName, setInputName] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
+
+  async function handleCreateName(e) {
+    e.preventDefault();
+    setRejectReason('');
+  
+    const isValid = await isValidUsername(inputName);
+  
+    if (isValid) {
+      const newUserRef = dbRef(db, `users/${AUTH_uid}`);
+      set(newUserRef, {id: inputName});
+    }
+  }
+  
+  async function isValidUsername(username) {
+    if (!/^[a-z0-9._]+$/.test(username)) {
+      setRejectReason('영문 소문자 또는 숫자를 입력해주세요.');
+      return false;
+    }
+  
+    const lowercaseUsername = username.toLowerCase();
+    if (lowercaseUsername.startsWith('_')) {
+      setRejectReason('언더바(_)는 처음에 사용할 수 없습니다.');
+      return false;
+    }
+  
+    if (username.length > 20) {
+      setRejectReason('20자 이내로 작상해주세요.');
+      return false;
+    }
+  
+    const usersRef = dbRef(db, 'users');
+    const checkUserNameQuery = query(usersRef, orderByChild('id'), equalTo(username));
+  
+    try {
+      const snapshot = await get(checkUserNameQuery);
+      if (snapshot.exists()) {
+        setRejectReason('이미 사용중이 아이디입니다.');
+        return false;
+      } else {
+        return true;
+      }
+    } catch (error) {
+      console.error('Error checking username:', error);
+      return false;
+    }
+  }
+  
+
+  return (
+    <CreateNameScrim>
+      <CreateNameContainer>
+        <form onSubmit={handleCreateName}>
+          <div>사용하실 아이디를 입력해주세요.</div>
+          <div style={{'fontSize': '12px'}}>
+            영문 소문자 및 숫자 사용 가능<br />
+            첫 글자를 제외하고 언더바(_) 사용 가능<br />
+            20자 이내
+          </div>
+          <input value={inputName} onChange={(e) => setInputName(e.target.value)} />
+          <div style={{
+            'width': '250px',
+            'height': '22px',
+            'color': 'red',
+            'fontSize': '12px',
+          }}>{rejectReason}</div>
+          <button type="submit">확인</button>
+        </form>
+      </CreateNameContainer>
+    </CreateNameScrim>
+  );
+}
 
 const ImageInputContainer = styled.div`
   width: 630px;
@@ -153,7 +251,8 @@ function Uploader() {
 function Home() {
   const {
     AUTH_uid,
-    AUTH_setUid
+    AUTH_setUid,
+    AUTH_userName,
   } = useAuthStore();
   const {
     openModal,
@@ -187,6 +286,8 @@ function Home() {
         <Link to={userId}>
           <button>프로필</button>
         </Link>
+
+        {AUTH_userName ? null : <CreateNameModal />}
       </div>
     );
   }

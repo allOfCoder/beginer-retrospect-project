@@ -38,9 +38,6 @@ const Content = styled.img`
 function ProfileImage() {
   const {
     STORAGE_images,
-    STORAGE_imagesAddPush,
-    STORAGE_imagesNextPageToken,
-    STORAGE_imagesSetNextPageToken
   } = useStorageStore();
   const {
     openModal,
@@ -54,26 +51,25 @@ function ProfileImage() {
   const [imageUrls, setImageUrls] = useState([]);
   const loader = useRef(null);
   const [renderCount, setRenderCount] = useState(0);
-  const [feedNames, setFeedNames] = useState([]);
   const [imagesArrays, setImagesArrays] = useState([]);
   
   useEffect(() => {
     // 첫 이미지 ref들 저장
     async function initialRender() {
-      const userRef = dbRef(db, 'users/' + AUTH_uid);
+      const userRef = dbRef(db, `users/${ AUTH_uid}`);
       let snapshotFeedNames = [];
       await get(child(userRef, 'feeds')).then((snapshot) => {
         snapshotFeedNames = snapshot.val();
       });
       const refs = await Promise.all(
         snapshotFeedNames.map((feedName) => {
-          const imageRef = storageRef(storage, 'images/' + feedName + '/0');
+          const imageRef = storageRef(storage, `images/${feedName}/0`);
           return imageRef
         })
       )
 
       const newImagesArrays = [];
-      for (let i = 0; i < 1 + Math.floor(feedNames.length / 12); i++) {
+      for (let i = 0; i < 1 + Math.floor(snapshotFeedNames.length / 12); i++) {
         const start = i * 12;
         const end = (i + 1) * 12;
         const imagesArraySection = [...refs].reverse().slice(start, end);

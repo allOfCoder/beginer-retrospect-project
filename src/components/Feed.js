@@ -159,17 +159,17 @@ function FeedMenu() {
     if (!userConfirmed) {
       return;
     }
-    const storageFeedRef = storageRef(storage, `/images/${modalImgRef.name}`);
+    const storageFeedRef = storageRef(storage, `images/${modalImgRef.name}`);
     const promise1 = listAll(storageFeedRef)
     .then(result => {
       const deletionPromises = result.items.map(itemRef => deleteObject(itemRef));
       return Promise.all(deletionPromises);
     })
 
-    const dbFeedRef = dbRef(db, `/all_feeds/${modalImgRef.name}`);
+    const dbFeedRef = dbRef(db, `all_feeds/${modalImgRef.name}`);
     const promise2 = remove(dbFeedRef);
 
-    const dbUserFeedRef = dbRef(db, `/users/${AUTH_uid}/feeds`);
+    const dbUserFeedRef = dbRef(db, `users/${AUTH_uid}/feeds`);
     const specificValueQuery = query(dbUserFeedRef, orderByChild('name'), equalTo(Number(modalImgRef.name)));
     const promise3 = get(specificValueQuery).then(snapshot => {
       let key;

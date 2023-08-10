@@ -9,7 +9,7 @@ const useAuthStore = create((set)=>({
     return Promise.resolve(val);
   },
   AUTH_userName : null,
-  AUTH_setUserName : (val) => set( (prev) => ({ AUTH_userName : val }) )
+  AUTH_setUserName : (val) => set( (prev) => ({ AUTH_userName : val }) ),
 }))
 
 auth.onAuthStateChanged((user) => {
@@ -17,7 +17,9 @@ auth.onAuthStateChanged((user) => {
     useAuthStore.getState().AUTH_setUid(user.uid);
     get(child(dbRef(db), 'users/' + user.uid + '/id'))  
     .then((snapshot) => {
-      useAuthStore.getState().AUTH_setUserName(snapshot.val());
+      if (snapshot.val()) {
+        useAuthStore.getState().AUTH_setUserName(snapshot.val());
+      }
     })
   } else {
     useAuthStore.getState().AUTH_setUid(null);
