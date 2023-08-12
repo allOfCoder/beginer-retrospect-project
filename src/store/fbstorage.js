@@ -1,7 +1,10 @@
 import { create } from 'zustand'
 
-const useStorageStore = create((set)=>({
+const useStorageStore = create((set) => ({
   STORAGE_images : [], // 썸네일 이미지들의 reference가 들어있음
+  STORAGE_imagesSet: () => set( () => ({
+    STORAGE_images: []
+  })),
   STORAGE_imagesTime : null,
   STORAGE_imagesNextPageToken : '',
   STORAGE_imagesTimeSet : () => {
@@ -20,6 +23,6 @@ const useStorageStore = create((set)=>({
   STORAGE_imagesSetNextPageToken : (value) => set( () => ({
     STORAGE_imagesNextPageToken : value
   }) )
-}))
+}));
 
 export default useStorageStore;

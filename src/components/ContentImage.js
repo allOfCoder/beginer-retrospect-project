@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { storage, db } from '../firebaseConfig'
 import {
@@ -11,10 +12,7 @@ import Feed from './Feed'
 import useStorageStore from '../store/fbstorage';
 import useAuthStore from '../store/fbauth';
 import useStore from '../store/store';
-import {
-  RENDER_INITIAL,
-  RENDER_ADDITIONAL,
-} from '../constants';
+import { RENDER_INITIAL, RENDER_ADDITIONAL } from '../constants';
 
 const Container = styled.div`
   width: 100%;
@@ -37,6 +35,7 @@ const Content = styled.img`
 function ContentImage() {
   const {
     STORAGE_images,
+    STORAGE_imagesSet,
     STORAGE_imagesAddPush,
     STORAGE_imagesNextPageToken,
     STORAGE_imagesSetNextPageToken
@@ -47,14 +46,17 @@ function ContentImage() {
     setModalImgRef,
     setModalContent,
   } = useStore();
-  const {
-    AUTH_uid
-  } = useAuthStore();
+  const {AUTH_uid} = useAuthStore();
+  const location = useLocation();
   const [imageUrls, setImageUrls] = useState([]);
   const loader = useRef(null);
   const imageListRef = storageRef(storage, "images/");
   const addedImagesSet = useRef(new Set()).current;
-  
+
+  useEffect(() => {
+    STORAGE_imagesSet([]);
+  }, [location, STORAGE_imagesSet]);
+
   useEffect(() => {
     // 첫 이미지들 렌더링
     function initialRender() {
