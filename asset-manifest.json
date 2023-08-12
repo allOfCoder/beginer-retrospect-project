@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "https://allofcoder.github.io/beginer-retrospect-project/static/css/main.073c9b0a.css",
+    "main.js": "https://allofcoder.github.io/beginer-retrospect-project/static/js/main.f32f8bce.js",
+    "index.html": "https://allofcoder.github.io/beginer-retrospect-project/index.html",
+    "main.073c9b0a.css.map": "https://allofcoder.github.io/beginer-retrospect-project/static/css/main.073c9b0a.css.map",
+    "main.f32f8bce.js.map": "https://allofcoder.github.io/beginer-retrospect-project/static/js/main.f32f8bce.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.073c9b0a.css",
+    "static/js/main.f32f8bce.js"
+  ]
+}
