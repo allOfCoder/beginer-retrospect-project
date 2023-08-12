@@ -42,5 +42,8 @@
       "last 1 safari version"
     ]
   },
-  "homepage": "https://allofcoder.github.io/beginer-retrospect-project/"
+  "homepage": "https://allofcoder.github.io/beginer-retrospect-project/",
+  "devDependencies": {
+    "gh-pages": "^6.0.0"
+  }
 }
