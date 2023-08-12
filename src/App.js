@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  BrowserRouter,
+  HashRouter,
   Route,
   Routes,
 } from "react-router-dom";
@@ -12,14 +12,14 @@ import Login from './pages/Login';
 function App() {
   return (
     <div>
-        <BrowserRouter basename={process.env.PUBLIC_URL}>
-          <Routes>
-            <Route path="/" element={<Home />}></Route>
-            <Route path="/login" element={<Login />}></Route>
-            <Route path="/:id" element={<Profile />}></Route>
-          </Routes>
-        </BrowserRouter>
-      </div>
+      <HashRouter>
+        <Routes>
+          <Route path="/" element={<Home />}></Route>
+          <Route path="/login" element={<Login />}></Route>
+          <Route path="/:id" element={<Profile />}></Route>
+        </Routes>
+      </HashRouter>
+    </div>
   );
 }
 
