@@ -11,6 +11,7 @@ import ProfileImage from '../components/ProfileImage'
 function Profile() {
   const {
     AUTH_setUid,
+    AUTH_userName
   } = useAuthStore();
   const params = useParams();
   // const id = params.id;
@@ -38,7 +39,9 @@ function Profile() {
         설정 영역
         <button onClick={handleClick}>버튼</button>
       </div>
-      <ProfileImage />
+      {AUTH_userName 
+      ? <ProfileImage />
+      : null}
       <Modal />  {/* <Feed />, <Uploader /> */}
     </React.Fragment>
   )

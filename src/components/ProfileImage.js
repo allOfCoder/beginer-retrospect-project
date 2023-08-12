@@ -7,7 +7,7 @@ import {
   list,
   getDownloadURL,
 } from "firebase/storage";
-import { ref as dbRef, set, get, child } from "firebase/database";
+import { ref as dbRef, set, get, child, query, orderByChild } from "firebase/database";
 import Feed from './Feed'
 import useStorageStore from '../store/fbstorage';
 import useAuthStore from '../store/fbauth';
@@ -46,7 +46,8 @@ function ProfileImage() {
     setModalContent,
   } = useStore();
   const {
-    AUTH_uid
+    AUTH_uid,
+    AUTH_userName
   } = useAuthStore();
   const [imageUrls, setImageUrls] = useState([]);
   const loader = useRef(null);
@@ -56,20 +57,21 @@ function ProfileImage() {
   useEffect(() => {
     // 첫 이미지 ref들 저장
     async function initialRender() {
+      let snapshotFeedNamesArray = [];
       const userRef = dbRef(db, `users/${ AUTH_uid}`);
-      let snapshotFeedNames = [];
       await get(child(userRef, 'feeds')).then((snapshot) => {
-        snapshotFeedNames = snapshot.val();
+        const snapshotFeedNamesObject = snapshot.val();
+        snapshotFeedNamesArray = Object.values(snapshotFeedNamesObject);
       });
       const refs = await Promise.all(
-        snapshotFeedNames.map((feedName) => {
-          const imageRef = storageRef(storage, `images/${feedName}/0`);
+        snapshotFeedNamesArray.map((feedName) => {
+          const imageRef = storageRef(storage, `images/${feedName.name}/0`);
           return imageRef
         })
       )
 
       const newImagesArrays = [];
-      for (let i = 0; i < 1 + Math.floor(snapshotFeedNames.length / 12); i++) {
+      for (let i = 0; i < 1 + Math.floor(snapshotFeedNamesArray.length / 12); i++) {
         const start = i * 12;
         const end = (i + 1) * 12;
         const imagesArraySection = [...refs].reverse().slice(start, end);
@@ -119,7 +121,8 @@ function ProfileImage() {
   function handleFeedClick(e, index) {
     e.preventDefault();
     setModalImgSrc(e.target.src);
-    setModalImgRef(STORAGE_images[index].parent);
+    const integratedImagesArray = imagesArrays.flatMap(innerArray => innerArray);
+    setModalImgRef(integratedImagesArray[index].parent);
     openModal();
     setModalContent(<Feed />);
   }

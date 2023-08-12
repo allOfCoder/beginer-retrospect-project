@@ -248,6 +248,26 @@ function Uploader() {
   );
 };
 
+const Container = styled.div`
+  width: 100%;
+  height: 99;
+  display: flex;
+  flex-direction: row;
+`
+const Navigation = styled.div`
+  width: 130px;
+  height: 100vh;
+  padding-top: 30px;
+  & * button {
+    width: 100px;
+    margin: 0 auto;
+    margin: 10px;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+  }
+  border-right: 1px solid rgba(0, 0, 0, 0.2);
+`
 function Home() {
   const {
     AUTH_uid,
@@ -303,12 +323,15 @@ function Home() {
   }
 
   return (
-    <React.Fragment>
-      {AUTH_uid ? <UserActions userId={userId} /> : <GuestActions />}
+    <Container>
+      <Navigation>
+        {AUTH_uid ? <UserActions userId={userId} /> : <GuestActions />}
+      </Navigation>
 
       <ContentImage />
       <Modal /> {/* <Feed />, <Uploader /> */}
-    </React.Fragment>
+      
+    </Container>
   );  
 }
 

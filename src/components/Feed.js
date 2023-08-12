@@ -12,6 +12,7 @@ const CarouselContainer = styled.div`
   height: 630px;
   overflow: hidden;
   position: relative;
+  border-radius: 4px 0 0 4px;
   `
 const CarouselFrame = styled.div`
   width: calc(8 * 630px);
@@ -27,13 +28,16 @@ const FeedImg = styled.img`
   margin: 0;
   `
 const CarouselNavigate = styled.button`
-  width: 30px;
-  height: 30px;
-  border: 1px solid black;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border-style: none;
+  background-color: rgba(255, 255, 255, 0.4);
   position: absolute;
-  right: ${(props) => (props.$direction === 'right' ? '0' : null)};
-  left: ${(props) => (props.$direction === 'left' ? '0' : null)};
+  right: ${(props) => (props.$direction === 'right' ? '10px' : null)};
+  left: ${(props) => (props.$direction === 'left' ? '10px' : null)};
   top: 50%;
+  cursor: pointer;
   `
 const CarouselPagination = styled.div`
   display: flex;
@@ -196,15 +200,25 @@ function FeedMenu() {
         }}}>
         <MenuContainer>
           <MenuButton onClick={handleDeleteButton}>삭제</MenuButton>
-          <MenuButton>1</MenuButton>
-          <MenuButton>2</MenuButton>
-          <MenuButton>3</MenuButton>
-          <MenuButton>4</MenuButton>
+          <MenuButton style={{'cursor': 'default'}}>1</MenuButton>
+          <MenuButton style={{'cursor': 'default'}}>2</MenuButton>
+          <MenuButton style={{'cursor': 'default'}}>3</MenuButton>
+          <MenuButton style={{'cursor': 'default'}}>4</MenuButton>
           <MenuButton $noline={true}>5</MenuButton>
         </MenuContainer>
       </MenuScrim>
     )
   }
+}
+
+function MenuDots() {
+  return(
+    <svg>
+      <circle cx='6' cy='12' r='1.5'></circle>
+      <circle cx='12' cy='12' r='1.5'></circle>
+      <circle cx='18' cy='12' r='1.5'></circle>
+    </svg>
+  )
 }
 
 const FeedContents = styled.div`
@@ -217,15 +231,30 @@ const FeedInformation = styled.div`
   background-color: white;
   display: flex;
   justify-content: space-between;
+  border-radius: 0 4px 4px 0;
+`
+const FeedManage = styled.div`
+  width: 350px;
+  height: 50px;
+  background-color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  & > * {
+    margin: 15px;
+  }
+  user-select: none;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0 4px 0 0;
 `
 const FeedMenuButton = styled.div`
   width: 24px;
   height: 24px;
-  border: 1px solid black;
+  cursor: pointer;
 `
 function Feed() {
   const {modalImgRef, openFeedMenu} = useStore();
-  const {AUTH_uid} = useAuthStore();
+  const {AUTH_uid, AUTH_userName} = useAuthStore();
 
   function handleFeedMenuOpen() {
     openFeedMenu();
@@ -234,11 +263,17 @@ function Feed() {
   return (
     <FeedContents>
       <Carousel />
-      <FeedInformation>
-        <span>프로필</span>
-        <FeedMenuButton onClick={(e) => handleFeedMenuOpen()} />
-        <FeedMenu />
-      </FeedInformation>
+
+        <FeedInformation>
+          <FeedManage>
+            <span>{AUTH_userName}</span>
+            <FeedMenuButton onClick={(e) => handleFeedMenuOpen()}>
+              <MenuDots />
+            </FeedMenuButton>
+            <FeedMenu />
+          </FeedManage>
+
+        </FeedInformation>
     </FeedContents>
   )
 }
