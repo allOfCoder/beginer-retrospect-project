@@ -12,7 +12,6 @@ import Login from './pages/Login';
 function App() {
   return (
     <div>
-      aa
         <BrowserRouter basename={process.env.PUBLIC_URL}>
           <Routes>
             <Route path="/" element={<Home />}></Route>
