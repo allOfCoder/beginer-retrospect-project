@@ -14,12 +14,11 @@
 |            홈/로그인 홈         |
 | :----------------------------: |
 |   <img src="images/Home2.png">  |
-| <img src="images/HOme.png">|
+| <img src="images/Home.png">|
 
 |              로그인            |
 | :---------------------------------: |
 |   <img src="images/Login.png">   |
-| <img src="images/teamInfoDark.png"> |
 
 
 |            업로드          |
