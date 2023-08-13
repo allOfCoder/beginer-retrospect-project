@@ -1,70 +1,50 @@
-# Getting Started with Create React App
+# 인스타그램 탐색 탭 카피 웹
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## 소개
 
-## Available Scripts
+- 인스타그램의 탐색 탭을 참고함
+- 한 피드 당 이미지를 최대 8장 까지 업로드 할 수 있음
+- 업로드를 위해 이미지를 선택하면 자동으로 1:1 비율로 리사이징
+- firebase storage와 realtime database의 정보를 통해 이미지를 렌더링
+- 가장 최근에 업로드된 피드부터 순차적으로 렌더링
+- 구글 계정을 통해 로그인 후 자신이 올린 피드들을 따로 렌더링
 
-In the project directory, you can run:
+## 웹 사이트 화면
 
-### `npm start`
+|            홈/로그인 홈         |
+| :----------------------------: |
+|   <img src="images/Home2.png">  |
+| <img src="images/HOme.png">|
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+|              로그인            |
+| :---------------------------------: |
+|   <img src="images/Login.png">   |
+| <img src="images/teamInfoDark.png"> |
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
 
-### `npm test`
+|            업로드          |
+| :-------------------------------------: |
+|   <img src="images/upload.png">   |
+|   <img src="images/upload2.png">   |
+| 최대 8장까지 삽입 가능 |
+| 이미지 다시 클릭 시 제거 |
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+|          프로필       |
+| :-------------------------------: |
+|   <img src="images/Profile.png">   |
 
-### `npm run build`
+|          firebase       |
+| :-------------------------------: |
+|   <img src="images/storage.png">   |
+|   <img src="images/realtime database.png">   |
+|   <img src="images/authentication.png">   |
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## 기술 스택
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- React
+- react-router-dom
+- firebase: authorization, storage, realtime database
+- styled-components: 효율적이고 보기 편한 css 적용
+- zustand: 전역 상태 관리 라이브러리
+- pica: 이미지 사이즈 조절
+  
