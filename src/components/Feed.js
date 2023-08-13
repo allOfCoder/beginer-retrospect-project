@@ -211,13 +211,17 @@ function FeedMenu() {
   }
 }
 
+const MenuDotsContainer = styled.svg`
+  width: 24px;
+  height: 24px;
+`
 function MenuDots() {
   return(
-    <svg>
+    <MenuDotsContainer>
       <circle cx='6' cy='12' r='1.5'></circle>
       <circle cx='12' cy='12' r='1.5'></circle>
       <circle cx='18' cy='12' r='1.5'></circle>
-    </svg>
+    </MenuDotsContainer>
   )
 }
 

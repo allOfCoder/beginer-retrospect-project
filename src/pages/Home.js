@@ -266,6 +266,7 @@ const Navigation = styled.div`
     flex-direction: column;
   }
   border-right: 1px solid rgba(0, 0, 0, 0.2);
+  position: fixed;
 `
 const Button = styled.button`
   background-color: transparent;
